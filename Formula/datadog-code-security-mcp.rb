@@ -2,17 +2,17 @@ class DatadogCodeSecurityMcp < Formula
   desc "Local code security scanning for AI coding assistants"
   homepage "https://github.com/datadog-labs/datadog-code-security-mcp"
   license "Apache-2.0"
-  version "v0.1.3"
+  version "v0.2.0"
 
   # SHA256 checksums for each platform/architecture combination
   sha256_map = {
     "darwin" => {
-      "amd64" => "7377a77ba116dd391dac46ad9e19e445f9d2d4934f6033f5bd78b04098cac87d",
-      "arm64" => "147fd0152eb713d6607806992244564cce6a9a06f8f2bed2bf80a9470599338a",
+      "amd64" => "0a92822c7e5ecfeadfb6c9514447b82aa5a95ab3ae2777ad65e0e12a9853b2c9",
+      "arm64" => "538115a39212c72b76e11d8694f750a59b649c7a23b972749489e9659b056ae0",
     },
     "linux" => {
-      "amd64" => "6577f6576864263053b3b775e35e7c4b6667a0310a62031f71d41c48787bd893",
-      "arm64" => "a5d7878bfe4d9222858234f53fa19bf1c8301842e82ba4c38e2df19317428f2c",
+      "amd64" => "f7dc42a61b966a8d3dcb41490f7ffb21dac284336a3d7c0a2eb2c70e62aeb754",
+      "arm64" => "63694ac7cff87dd42046bc275e24d219899e81156181a80d4d00ee689bc7ba41",
     }
   }
 
