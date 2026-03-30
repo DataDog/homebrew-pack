@@ -111,7 +111,7 @@ git add "$FORMULA_FILE"
 git commit -m "Update ${FORMULA} to v${VERSION}"
 git push -u origin "$BRANCH"
 
-gh pr create \
+PR_URL=$(gh pr create \
   --title "Update ${FORMULA} to v${VERSION}" \
   --body "$(cat <<PREOF
 ## Summary
@@ -124,4 +124,14 @@ gh pr create \
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 PREOF
-)"
+)")
+
+echo "PR created: $PR_URL"
+
+read -r -p "Merge PR with admin? [y/N] " MERGE_CONFIRM
+if [[ "${MERGE_CONFIRM,,}" == "y" ]]; then
+  gh pr merge --admin --squash "$PR_URL"
+  echo "PR merged."
+else
+  echo "Skipping merge."
+fi
