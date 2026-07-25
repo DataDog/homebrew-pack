@@ -1,0 +1,15 @@
+# Policy for: .github/workflows/update-pup-formula.yml (job: update) in datadog-labs/homebrew-pack
+# Grants the manually dispatched formula-bump job the write access it needs to push
+# the update/pup-<version> branch and open the corresponding pull request.
+issuer: https://token.actions.githubusercontent.com
+subject: repo:datadog-labs/homebrew-pack:ref:refs/heads/main
+
+claim_pattern:
+  event_name: workflow_dispatch
+  job_workflow_ref: datadog-labs/homebrew-pack/\.github/workflows/update-pup-formula\.yml@refs/heads/main
+  ref: refs/heads/main
+  repository: datadog-labs/homebrew-pack
+
+permissions:
+  contents: write
+  pull_requests: write
