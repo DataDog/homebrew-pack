@@ -15,34 +15,37 @@ set -euo pipefail
 FORMULA="${1:-}"
 VERSION="${2:-}"
 
-if [[ -z "$FORMULA" || -z "$VERSION" ]]; then
+if [[ -z "${FORMULA}" || -z "${VERSION}" ]]
+then
   echo "Usage: $0 <formula> <version>" >&2
   exit 1
 fi
 
 FORMULA_FILE="Formula/${FORMULA}.rb"
 
-if [[ ! -f "$FORMULA_FILE" ]]; then
-  echo "Formula file not found: $FORMULA_FILE" >&2
+if [[ ! -f "${FORMULA_FILE}" ]]
+then
+  echo "Formula file not found: ${FORMULA_FILE}" >&2
   exit 1
 fi
 
 # Derive repo from the formula's homepage field
-REPO=$(grep 'homepage' "$FORMULA_FILE" | sed -E 's|.*"https://github.com/([^"]+)".*|\1|')
-if [[ -z "$REPO" ]]; then
+REPO=$(grep 'homepage' "${FORMULA_FILE}" | sed -E 's|.*"https://github.com/([^"]+)".*|\1|')
+if [[ -z "${REPO}" ]]
+then
   echo "Could not determine GitHub repo from formula homepage" >&2
   exit 1
 fi
 
-echo "Updating $FORMULA to v${VERSION} from ${REPO}..."
+echo "Updating ${FORMULA} to v${VERSION} from ${REPO}..."
 
 # Fetch checksums from the release
-CHECKSUMS=$(gh release download "v${VERSION}" --repo "$REPO" --pattern '*checksums.txt' --output -)
+CHECKSUMS=$(gh release download "v${VERSION}" --repo "${REPO}" --pattern '*checksums.txt' --output -)
 
 get_sha() {
   local filename="$1"
   # use awk exact match to avoid matching .sbom.json variants
-  echo "$CHECKSUMS" | awk -v f="$filename" '$2 == f {print $1}'
+  echo "${CHECKSUMS}" | awk -v f="${filename}" '$2 == f {print $1}'
 }
 
 DARWIN_ARM64=$(get_sha "${FORMULA}_${VERSION}_Darwin_arm64.tar.gz")
@@ -50,17 +53,19 @@ DARWIN_X86_64=$(get_sha "${FORMULA}_${VERSION}_Darwin_x86_64.tar.gz")
 LINUX_ARM64=$(get_sha "${FORMULA}_${VERSION}_Linux_arm64.tar.gz")
 LINUX_X86_64=$(get_sha "${FORMULA}_${VERSION}_Linux_x86_64.tar.gz")
 
-for var in DARWIN_ARM64 DARWIN_X86_64 LINUX_ARM64 LINUX_X86_64; do
-  if [[ -z "${!var}" ]]; then
-    echo "Could not find checksum for $var" >&2
+for var in DARWIN_ARM64 DARWIN_X86_64 LINUX_ARM64 LINUX_X86_64
+do
+  if [[ -z "${!var}" ]]
+  then
+    echo "Could not find checksum for ${var}" >&2
     exit 1
   fi
 done
 
-CURRENT_VERSION=$(grep 'version ' "$FORMULA_FILE" | sed -E 's/.*"(.+)".*/\1/')
+CURRENT_VERSION=$(grep 'version ' "${FORMULA_FILE}" | sed -E 's/.*"(.+)".*/\1/')
 BRANCH="update-${FORMULA}-${VERSION}"
 
-git checkout -b "$BRANCH"
+git checkout -b "${BRANCH}"
 
 # Replace version and all URLs/checksums in one sed pass
 sed -i '' \
@@ -69,10 +74,10 @@ sed -i '' \
   -e "s|/v${CURRENT_VERSION}/${FORMULA}_${CURRENT_VERSION}_Darwin_x86_64.tar.gz|/v${VERSION}/${FORMULA}_${VERSION}_Darwin_x86_64.tar.gz|g" \
   -e "s|/v${CURRENT_VERSION}/${FORMULA}_${CURRENT_VERSION}_Linux_arm64.tar.gz|/v${VERSION}/${FORMULA}_${VERSION}_Linux_arm64.tar.gz|g" \
   -e "s|/v${CURRENT_VERSION}/${FORMULA}_${CURRENT_VERSION}_Linux_x86_64.tar.gz|/v${VERSION}/${FORMULA}_${VERSION}_Linux_x86_64.tar.gz|g" \
-  "$FORMULA_FILE"
+  "${FORMULA_FILE}"
 
 # Update checksums (match existing sha256 lines by position relative to their url)
-python3 - "$FORMULA_FILE" "$DARWIN_ARM64" "$DARWIN_X86_64" "$LINUX_ARM64" "$LINUX_X86_64" <<'EOF'
+python3 - "${FORMULA_FILE}" "${DARWIN_ARM64}" "${DARWIN_X86_64}" "${LINUX_ARM64}" "${LINUX_X86_64}" <<'EOF'
 import sys, re
 
 path, darwin_arm64, darwin_x86_64, linux_arm64, linux_x86_64 = sys.argv[1:]
@@ -107,13 +112,12 @@ with open(path, 'w') as f:
     f.write(content)
 EOF
 
-git add "$FORMULA_FILE"
+git add "${FORMULA_FILE}"
 git commit -m "Update ${FORMULA} to v${VERSION}"
-git push -u origin "$BRANCH"
+git push -u origin "${BRANCH}"
 
-PR_URL=$(gh pr create \
-  --title "Update ${FORMULA} to v${VERSION}" \
-  --body "$(cat <<PREOF
+PR_BODY=$(
+  cat <<PREOF
 ## Summary
 - Updates \`${FORMULA}\` formula from v${CURRENT_VERSION} to v${VERSION}
 - Updates all SHA256 checksums for macOS (arm64, x86_64) and Linux (arm64, x86_64)
@@ -124,13 +128,18 @@ PR_URL=$(gh pr create \
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 PREOF
-)")
+)
 
-echo "PR created: $PR_URL"
+PR_URL=$(gh pr create \
+  --title "Update ${FORMULA} to v${VERSION}" \
+  --body "${PR_BODY}")
+
+echo "PR created: ${PR_URL}"
 
 read -r -p "Merge PR with admin? [y/N] " MERGE_CONFIRM
-if [[ "${MERGE_CONFIRM,,}" == "y" ]]; then
-  gh pr merge --admin --squash "$PR_URL"
+if [[ "${MERGE_CONFIRM,,}" == "y" ]]
+then
+  gh pr merge --admin --squash "${PR_URL}"
   echo "PR merged."
 else
   echo "Skipping merge."
