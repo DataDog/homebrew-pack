@@ -6,7 +6,6 @@
 class Pup < Formula
   desc "Go-based command-line wrapper for easy interaction with Datadog APIs"
   homepage "https://github.com/datadog-labs/pup"
-  version "1.10.0"
   license "Apache-2.0"
 
   on_macos do

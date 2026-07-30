@@ -2,30 +2,25 @@ class DatadogCodeSecurityMcp < Formula
   desc "Local code security scanning for AI coding assistants"
   homepage "https://github.com/datadog-labs/datadog-code-security-mcp"
   license "Apache-2.0"
-  version "v0.2.0"
-
-  # SHA256 checksums for each platform/architecture combination
-  sha256_map = {
-    "darwin" => {
-      "amd64" => "0a92822c7e5ecfeadfb6c9514447b82aa5a95ab3ae2777ad65e0e12a9853b2c9",
-      "arm64" => "538115a39212c72b76e11d8694f750a59b649c7a23b972749489e9659b056ae0",
-    },
-    "linux" => {
-      "amd64" => "f7dc42a61b966a8d3dcb41490f7ffb21dac284336a3d7c0a2eb2c70e62aeb754",
-      "arm64" => "63694ac7cff87dd42046bc275e24d219899e81156181a80d4d00ee689bc7ba41",
-    }
-  }
-
-  arch = Hardware::CPU.arm? ? "arm64" : "amd64"
 
   on_macos do
-    url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/#{version}/datadog-code-security-mcp-darwin-#{arch}.tar.gz"
-    sha256 sha256_map["darwin"][arch]
+    if Hardware::CPU.arm?
+      url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/v0.3.0/datadog-code-security-mcp-darwin-arm64.tar.gz"
+      sha256 "011bdd8c3f36b2b454015beb1a8a8968766a2a7ea0077d2085ff591cfcc4e847"
+    else
+      url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/v0.3.0/datadog-code-security-mcp-darwin-amd64.tar.gz"
+      sha256 "19c2aeae3fcadbd0cb232ffb5715f9f5d00beff4e5ec316eafbaf7a097b56022"
+    end
   end
 
   on_linux do
-    url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/#{version}/datadog-code-security-mcp-linux-#{arch}.tar.gz"
-    sha256 sha256_map["linux"][arch]
+    if Hardware::CPU.arm?
+      url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/v0.3.0/datadog-code-security-mcp-linux-arm64.tar.gz"
+      sha256 "d931511aa64a63c69bd7d54925c0707655d0c7102b1c96990eb9f90b3d6e1ca9"
+    else
+      url "https://github.com/datadog-labs/datadog-code-security-mcp/releases/download/v0.3.0/datadog-code-security-mcp-linux-amd64.tar.gz"
+      sha256 "e6b583a0e6e59c34fe4db1e1d665da9f833d5eed049e8eb71f4628226482fe4d"
+    end
   end
 
   def install
