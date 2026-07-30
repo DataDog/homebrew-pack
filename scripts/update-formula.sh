@@ -62,7 +62,13 @@ do
   fi
 done
 
-CURRENT_VERSION=$(grep 'version ' "${FORMULA_FILE}" | sed -E 's/.*"(.+)".*/\1/')
+CURRENT_VERSION=$(grep -m 1 'releases/download/v' "${FORMULA_FILE}" | sed -E 's|.*releases/download/v([^/]+)/.*|\1|')
+if [[ -z "${CURRENT_VERSION}" ]]
+then
+  echo "Could not determine current version from formula URLs" >&2
+  exit 1
+fi
+
 BRANCH="update-${FORMULA}-${VERSION}"
 
 git checkout -b "${BRANCH}"
