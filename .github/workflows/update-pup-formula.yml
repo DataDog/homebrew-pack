@@ -62,9 +62,9 @@ jobs:
             exit 1
           fi
 
-          current_version="$(sed -nE 's/^[[:space:]]*version "([^"]+)".*/\1/p' "$FORMULA_FILE")"
+          current_version="$(grep -m 1 'releases/download/v' "$FORMULA_FILE" | sed -E 's|.*releases/download/v([^/]+)/.*|\1|')"
           if [[ -z "$current_version" ]]; then
-            echo "Could not determine current formula version from $FORMULA_FILE" >&2
+            echo "Could not determine current version from $FORMULA_FILE URLs" >&2
             exit 1
           fi
 
@@ -148,16 +148,9 @@ jobs:
               sys.exit(1)
 
           lines = formula_file.read_text().splitlines(keepends=True)
-          version_updated = False
           assets_updated = set()
 
           for index, line in enumerate(lines):
-              if not version_updated and re.match(r'\s*version "', line):
-                  indent = re.match(r"\s*", line).group(0)
-                  lines[index] = f'{indent}version "{version}"\n'
-                  version_updated = True
-                  continue
-
               asset_match = re.search(
                   r'pup_[^"]+_(Darwin_arm64|Darwin_x86_64|Linux_arm64|Linux_x86_64)\.tar\.gz',
                   line,
@@ -180,10 +173,6 @@ jobs:
               indent = re.match(r"\s*", lines[checksum_index]).group(0)
               lines[checksum_index] = f'{indent}sha256 "{parsed_checksums[suffix]}"\n'
               assets_updated.add(suffix)
-
-          if not version_updated:
-              print(f"Could not update version in {formula_file}", file=sys.stderr)
-              sys.exit(1)
 
           missing_updates = sorted(set(suffixes) - assets_updated)
           if missing_updates:
