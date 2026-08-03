@@ -184,10 +184,26 @@ jobs:
 
       - name: Validate formula changes
         if: steps.release.outputs.needs_update == 'true'
+        env:
+          PUP_VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
           ruby -c "$FORMULA_FILE"
           git diff --check "$FORMULA_FILE"
+
+          # Homebrew infers the version from the URL, and its heuristic picks up
+          # the "64" in "arm64"/"x86_64" when the /vX.Y.Z/ path segment is
+          # missing, producing kegs versioned "64" that can never be upgraded.
+          url_count="$(grep -c "/v${PUP_VERSION}/pup_${PUP_VERSION}_" "$FORMULA_FILE" || true)"
+          if [[ "$url_count" -ne 4 ]]; then
+            echo "Expected 4 versioned release URLs in $FORMULA_FILE, found ${url_count}." >&2
+            exit 1
+          fi
+
+          if grep -q '^[[:space:]]*version "' "$FORMULA_FILE"; then
+            echo "$FORMULA_FILE declares an explicit version, which brew audit --strict rejects as redundant." >&2
+            exit 1
+          fi
 
       - name: Create or update pull request
         if: steps.release.outputs.needs_update == 'true'
