@@ -7,6 +7,9 @@ class Pup < Formula
   desc "Go-based command-line wrapper for easy interaction with Datadog APIs"
   homepage "https://github.com/datadog-labs/pup"
   license "Apache-2.0"
+  # Some 1.10.0 installs recorded their keg as version "64", which Homebrew
+  # compares as newer than any 1.x release and so would never be upgraded.
+  version_scheme 1
 
   on_macos do
     if Hardware::CPU.arm?
