@@ -62,9 +62,9 @@ jobs:
             exit 1
           fi
 
-          current_version="$(sed -nE 's/^[[:space:]]*version "([^"]+)".*/\1/p' "$FORMULA_FILE")"
+          current_version="$(grep -m 1 'releases/download/v' "$FORMULA_FILE" | sed -E 's|.*releases/download/v([^/]+)/.*|\1|')"
           if [[ -z "$current_version" ]]; then
-            echo "Could not determine current formula version from $FORMULA_FILE" >&2
+            echo "Could not determine current version from $FORMULA_FILE URLs" >&2
             exit 1
           fi
 
@@ -148,16 +148,9 @@ jobs:
               sys.exit(1)
 
           lines = formula_file.read_text().splitlines(keepends=True)
-          version_updated = False
           assets_updated = set()
 
           for index, line in enumerate(lines):
-              if not version_updated and re.match(r'\s*version "', line):
-                  indent = re.match(r"\s*", line).group(0)
-                  lines[index] = f'{indent}version "{version}"\n'
-                  version_updated = True
-                  continue
-
               asset_match = re.search(
                   r'pup_[^"]+_(Darwin_arm64|Darwin_x86_64|Linux_arm64|Linux_x86_64)\.tar\.gz',
                   line,
@@ -181,10 +174,6 @@ jobs:
               lines[checksum_index] = f'{indent}sha256 "{parsed_checksums[suffix]}"\n'
               assets_updated.add(suffix)
 
-          if not version_updated:
-              print(f"Could not update version in {formula_file}", file=sys.stderr)
-              sys.exit(1)
-
           missing_updates = sorted(set(suffixes) - assets_updated)
           if missing_updates:
               print("Did not update assets for: " + ", ".join(missing_updates), file=sys.stderr)
@@ -195,10 +184,26 @@ jobs:
 
       - name: Validate formula changes
         if: steps.release.outputs.needs_update == 'true'
+        env:
+          PUP_VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
           ruby -c "$FORMULA_FILE"
           git diff --check "$FORMULA_FILE"
+
+          # Homebrew infers the version from the URL, and its heuristic picks up
+          # the "64" in "arm64"/"x86_64" when the /vX.Y.Z/ path segment is
+          # missing, producing kegs versioned "64" that can never be upgraded.
+          url_count="$(grep -c "/v${PUP_VERSION}/pup_${PUP_VERSION}_" "$FORMULA_FILE" || true)"
+          if [[ "$url_count" -ne 4 ]]; then
+            echo "Expected 4 versioned release URLs in $FORMULA_FILE, found ${url_count}." >&2
+            exit 1
+          fi
+
+          if grep -q '^[[:space:]]*version "' "$FORMULA_FILE"; then
+            echo "$FORMULA_FILE declares an explicit version, which brew audit --strict rejects as redundant." >&2
+            exit 1
+          fi
 
       - name: Create or update pull request
         if: steps.release.outputs.needs_update == 'true'
