@@ -205,33 +205,67 @@ jobs:
             exit 1
           fi
 
-      - name: Create or update pull request
+      - name: Stage formula changes
+        id: stage
         if: steps.release.outputs.needs_update == 'true'
         env:
-          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
           PUP_VERSION: ${{ steps.release.outputs.version }}
-          CURRENT_VERSION: ${{ steps.release.outputs.current_version }}
-          BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
 
           if git diff --quiet -- "$FORMULA_FILE"; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "No formula changes to publish."
             exit 0
           fi
 
           branch="update/pup-${PUP_VERSION}"
-          title="Update pup to v${PUP_VERSION}"
-          commit_message="Update pup to v${PUP_VERSION}"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$branch"
           git add "$FORMULA_FILE"
-          git commit -m "$commit_message"
 
-          git fetch origin "refs/heads/${branch}:refs/remotes/origin/${branch}" || true
-          git push --force-with-lease origin "HEAD:${branch}"
+          # commit-headless commits through the GitHub API, so it needs to be
+          # told whether to create the branch. Either way the staged change is
+          # applied on top of the branch point, so an existing branch is
+          # force-updated rather than accumulating a commit per re-dispatch.
+          if git ls-remote --exit-code --heads origin "refs/heads/${branch}" > /dev/null; then
+            create_branch=false
+            force=true
+          else
+            create_branch=true
+            force=false
+          fi
+
+          {
+            echo "has_changes=true"
+            echo "branch=$branch"
+            echo "create_branch=$create_branch"
+            echo "force=$force"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push signed commit
+        if: steps.stage.outputs.has_changes == 'true'
+        uses: DataDog/commit-headless@2801f6e08acb3a69b6c4d7b0d5deef27c1a15bc7 # action/v3.3.1
+        with:
+          command: commit
+          token: ${{ steps.octo-sts.outputs.token }}
+          branch: ${{ steps.stage.outputs.branch }}
+          create-branch: ${{ steps.stage.outputs.create_branch }}
+          force: ${{ steps.stage.outputs.force }}
+          head-sha: ${{ github.sha }}
+          message: Update pup to v${{ steps.release.outputs.version }}
+
+      - name: Create or update pull request
+        if: steps.stage.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.octo-sts.outputs.token }}
+          PUP_VERSION: ${{ steps.release.outputs.version }}
+          CURRENT_VERSION: ${{ steps.release.outputs.current_version }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          BRANCH: ${{ steps.stage.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          branch="$BRANCH"
+          title="Update pup to v${PUP_VERSION}"
 
           pr_body="$(mktemp)"
           cat > "$pr_body" <<EOF
